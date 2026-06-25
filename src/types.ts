@@ -11,6 +11,7 @@ export interface CardData {
   logo: string | null;
   message: string;
   youtubeId: string | null;
+  viewCount?: number;
 }
 
 export interface CarouselPhoto {

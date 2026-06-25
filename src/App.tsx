@@ -6,7 +6,7 @@ import { Guestbook } from './components/Guestbook';
 import { AudioPlayer } from './components/AudioPlayer';
 import type { CardData } from './types';
 import { cardDocRef } from './lib/firebase';
-import { onSnapshot, setDoc } from 'firebase/firestore';
+import { onSnapshot, setDoc, updateDoc, increment } from 'firebase/firestore';
 
 export default function App() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,6 +15,7 @@ export default function App() {
     logo: 'https://i.ibb.co.com/ycTkYnHP/Untitled-design-2.png',
     youtubeId: 'T1D5yADPMck',
     message: "Selamat memperingati hari jadi yang ke-26, IKATA UPN 'Veteran' Yogyakarta!\n\nSemoga ikatan persaudaraan alumni tambang semakin solid, terus berkontribusi untuk almamater dan kemajuan pertambangan nusantara. Tambang!!",
+    viewCount: 0,
   });
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -26,6 +27,12 @@ export default function App() {
         setCardData(doc.data() as CardData);
       }
     });
+
+    // Increment view count on first load per session
+    if (!sessionStorage.getItem('hasViewedCard')) {
+      setDoc(cardDocRef, { viewCount: increment(1) }, { merge: true }).catch(err => console.error("Failed to increment view count", err));
+      sessionStorage.setItem('hasViewedCard', 'true');
+    }
 
     return () => unsubscribe();
   }, []);
@@ -87,7 +94,7 @@ export default function App() {
 
       <main className="relative z-10 container mx-auto px-4 py-12 md:py-24 min-h-screen flex flex-col items-center">
         {!isOpen ? (
-          <CardCover onOpen={handleOpen} logo={cardData.logo} />
+          <CardCover onOpen={handleOpen} logo={cardData.logo} viewCount={cardData.viewCount} />
         ) : (
           <div className="w-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
             <CardInside data={cardData} onUpdate={handleUpdateCard} saveStatus={saveStatus} />

@@ -4,9 +4,10 @@ import { MailOpen } from 'lucide-react';
 interface CardCoverProps {
   onOpen: () => void;
   logo: string | null;
+  viewCount?: number;
 }
 
-export function CardCover({ onOpen, logo }: CardCoverProps) {
+export function CardCover({ onOpen, logo, viewCount }: CardCoverProps) {
   return (
     <motion.div
       className="flex flex-col items-center justify-center min-h-[80vh] cursor-pointer group"
@@ -49,6 +50,20 @@ export function CardCover({ onOpen, logo }: CardCoverProps) {
       >
         Ketuk untuk membuka
       </motion.p>
+
+      {viewCount !== undefined && (
+        <motion.div 
+          className="mt-12 flex items-center gap-2 text-[#8b7e6d]/80 bg-white/50 px-4 py-2 rounded-full border border-[#e5e0d8] shadow-sm"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <div className="w-2 h-2 rounded-full bg-[#8b5e3c] animate-pulse" />
+          <span className="text-xs font-medium uppercase tracking-wider">
+            Total Pengunjung: <span className="font-bold text-[#4a3f35]">{viewCount}</span>
+          </span>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
