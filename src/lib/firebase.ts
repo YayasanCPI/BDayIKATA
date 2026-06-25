@@ -3,7 +3,7 @@ import { getFirestore, doc, collection } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 // Reference to our single shared card document
 export const cardDocRef = doc(db, 'cards', 'shared-card');
