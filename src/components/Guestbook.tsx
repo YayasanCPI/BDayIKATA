@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { MessageSquare, Send } from 'lucide-react';
 import type { Comment } from '../types';
+import { guestbookCollection } from '../lib/firebase';
+import { onSnapshot, addDoc, query, orderBy } from 'firebase/firestore';
 
 export function Guestbook() {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -9,34 +11,33 @@ export function Guestbook() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('ikata-comments');
-    if (saved) {
-      setComments(JSON.parse(saved));
-    } else {
-      // Default comments
-      setComments([
-        { id: '1', name: 'Budi 05', message: 'Selamat ulang tahun IKATA! Jaya selalu Tambang UPN!', timestamp: Date.now() - 86400000 },
-        { id: '2', name: 'Andi M', message: 'Semoga makin solid angkatan 2005.', timestamp: Date.now() - 3600000 },
-      ]);
-    }
+    const q = query(guestbookCollection, orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedComments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Comment[];
+      setComments(fetchedComments);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !message.trim()) return;
 
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      message: message.trim(),
-      timestamp: Date.now(),
-    };
-
-    const updated = [newComment, ...comments];
-    setComments(updated);
-    localStorage.setItem('ikata-comments', JSON.stringify(updated));
-    setName('');
-    setMessage('');
+    try {
+      await addDoc(guestbookCollection, {
+        name: name.trim(),
+        message: message.trim(),
+        timestamp: Date.now(),
+      });
+      setName('');
+      setMessage('');
+    } catch (error) {
+      console.error('Error adding comment: ', error);
+    }
   };
 
   return (

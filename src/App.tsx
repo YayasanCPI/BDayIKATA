@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { CardCover } from './components/CardCover';
 import { CardInside } from './components/CardInside';
 import { Guestbook } from './components/Guestbook';
 import { AudioPlayer } from './components/AudioPlayer';
 import type { CardData } from './types';
+import { cardDocRef } from './lib/firebase';
+import { onSnapshot, setDoc } from 'firebase/firestore';
 
 export default function App() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +16,28 @@ export default function App() {
     youtubeId: 'T1D5yADPMck',
     message: "Selamat memperingati hari jadi yang ke-26, IKATA UPN 'Veteran' Yogyakarta!\n\nSemoga ikatan persaudaraan alumni tambang semakin solid, terus berkontribusi untuk almamater dan kemajuan pertambangan nusantara. Tambang!!",
   });
+
+  useEffect(() => {
+    // Listen for changes from Firestore
+    const unsubscribe = onSnapshot(cardDocRef, (doc) => {
+      if (doc.exists()) {
+        setCardData(doc.data() as CardData);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleUpdateCard = async (newData: CardData) => {
+    // Optimistic update
+    setCardData(newData);
+    // Save to Firestore
+    try {
+      await setDoc(cardDocRef, newData);
+    } catch (error) {
+      console.error('Error saving to Firestore:', error);
+    }
+  };
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -60,7 +84,7 @@ export default function App() {
           <CardCover onOpen={handleOpen} logo={cardData.logo} />
         ) : (
           <div className="w-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <CardInside data={cardData} onUpdate={setCardData} />
+            <CardInside data={cardData} onUpdate={handleUpdateCard} />
             <Guestbook />
           </div>
         )}

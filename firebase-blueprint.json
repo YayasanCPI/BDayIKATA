@@ -1,0 +1,21 @@
+{
+  "collections": [
+    {
+      "name": "cards",
+      "fields": [
+        { "name": "logo", "type": "string" },
+        { "name": "photo", "type": "string" },
+        { "name": "youtubeId", "type": "string" },
+        { "name": "message", "type": "string" }
+      ]
+    },
+    {
+      "name": "guestbook",
+      "fields": [
+        { "name": "name", "type": "string" },
+        { "name": "message", "type": "string" },
+        { "name": "timestamp", "type": "number" }
+      ]
+    }
+  ]
+}
