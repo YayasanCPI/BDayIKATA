@@ -6,8 +6,15 @@ export interface Comment {
 }
 
 export interface CardData {
-  photo: string | null;
+  photo: string | null; // Keep for backward compatibility or as the main cover photo
+  photos?: string[]; // Array of photos for the carousel
   logo: string | null;
   message: string;
   youtubeId: string | null;
+}
+
+export interface CarouselPhoto {
+  id: string;
+  photoUrl: string;
+  timestamp: number;
 }

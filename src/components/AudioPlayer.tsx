@@ -1,39 +1,70 @@
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import YouTube, { YouTubeProps } from 'react-youtube';
 
-export function AudioPlayer({ src }: { src: string }) {
+export function AudioPlayer({ youtubeId }: { youtubeId: string | null }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  useEffect(() => {
-    // Attempt auto-play on mount (will likely be blocked by browser until user interaction)
-    if (audioRef.current) {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-    }
-  }, [src]);
+  const playerRef = useRef<any>(null);
 
   const togglePlay = () => {
-    if (audioRef.current) {
+    if (playerRef.current) {
       if (isPlaying) {
-        audioRef.current.pause();
+        playerRef.current.pauseVideo();
       } else {
-        audioRef.current.play();
+        playerRef.current.playVideo();
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
   const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+    if (playerRef.current) {
+      if (isMuted) {
+        playerRef.current.unMute();
+        setIsMuted(false);
+      } else {
+        playerRef.current.mute();
+        setIsMuted(true);
+      }
     }
   };
 
+  const onPlayerReady: YouTubeProps['onReady'] = (event) => {
+    playerRef.current = event.target;
+    // Attempt auto-play when ready
+    event.target.playVideo();
+  };
+
+  const onPlayerStateChange: YouTubeProps['onStateChange'] = (event) => {
+    // 1 = playing, 2 = paused
+    if (event.data === 1) {
+      setIsPlaying(true);
+    } else if (event.data === 2 || event.data === 0) {
+      setIsPlaying(false);
+    }
+  };
+
+  if (!youtubeId) return null;
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex items-center gap-4 bg-[#2d4f1e] text-[#f7f3ee] p-4 rounded-3xl shadow-lg border border-[#3a6627]">
-      <audio ref={audioRef} src={src} loop />
+      <div className="hidden">
+        <YouTube 
+          videoId={youtubeId} 
+          opts={{
+            height: '0',
+            width: '0',
+            playerVars: {
+              autoplay: 1,
+              controls: 0,
+              loop: 1,
+              playlist: youtubeId, // Needed for loop to work
+            },
+          }} 
+          onReady={onPlayerReady} 
+          onStateChange={onPlayerStateChange}
+        />
+      </div>
       
       <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center">
         <button
@@ -47,7 +78,7 @@ export function AudioPlayer({ src }: { src: string }) {
       
       <div className="hidden sm:block">
         <p className="text-[10px] uppercase tracking-widest opacity-70">Lagu Angkatan</p>
-        <p className="text-sm font-bold truncate max-w-[120px]">Mars Tambang UPN</p>
+        <p className="text-sm font-bold truncate max-w-[120px]">Memutar Musik</p>
       </div>
 
       <div className="flex gap-2 items-center border-l border-white/20 pl-4 ml-2">

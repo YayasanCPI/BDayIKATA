@@ -98,7 +98,7 @@ export default function App() {
 
       {/* Audio player only mounts when card is opened to try auto-playing */}
       {isOpen && (
-        <AudioPlayer src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" /> 
+        <AudioPlayer youtubeId={cardData.youtubeId} /> 
       )}
     </div>
   );

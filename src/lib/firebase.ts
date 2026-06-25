@@ -10,3 +10,6 @@ export const cardDocRef = doc(db, 'cards', 'shared-card');
 
 // Reference to our guestbook collection
 export const guestbookCollection = collection(db, 'guestbook');
+
+// Reference to our photos collection
+export const photosCollection = collection(db, 'photos');

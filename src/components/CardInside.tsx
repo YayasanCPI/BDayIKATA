@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react';
-import { motion } from 'motion/react';
-import { Camera, Edit3, Save, Youtube, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import type { CardData } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Camera, Edit3, Save, Youtube, Loader2, CheckCircle, AlertCircle, Plus } from 'lucide-react';
+import type { CardData, CarouselPhoto } from '../types';
+import { photosCollection } from '../lib/firebase';
+import { addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 interface CardInsideProps {
   data: CardData;
@@ -61,8 +63,33 @@ export function CardInside({ data, onUpdate, saveStatus = 'idle' }: CardInsidePr
   const [isCompressing, setIsCompressing] = useState(false);
   const [tempMessage, setTempMessage] = useState(data.message);
   const [tempYoutubeUrl, setTempYoutubeUrl] = useState(data.youtubeId ? `https://youtube.com/watch?v=${data.youtubeId}` : '');
+  const [carouselPhotos, setCarouselPhotos] = useState<CarouselPhoto[]>([]);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const q = query(photosCollection, orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedPhotos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as CarouselPhoto[];
+      setCarouselPhotos(fetchedPhotos);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (carouselPhotos.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % carouselPhotos.length);
+    }, 3000); // 3 seconds interval
+    
+    return () => clearInterval(interval);
+  }, [carouselPhotos.length]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,10 +99,13 @@ export function CardInside({ data, onUpdate, saveStatus = 'idle' }: CardInsidePr
       reader.onloadend = async () => {
         try {
           const compressed = await compressImage(reader.result as string, 800, 1000, 0.7);
-          onUpdate({ ...data, photo: compressed });
+          // Upload to photos collection
+          await addDoc(photosCollection, {
+            photoUrl: compressed,
+            timestamp: Date.now(),
+          });
         } catch (error) {
-          console.error("Error compressing image:", error);
-          onUpdate({ ...data, photo: reader.result as string });
+          console.error("Error compressing or uploading image:", error);
         } finally {
           setIsCompressing(false);
         }
@@ -200,7 +230,20 @@ export function CardInside({ data, onUpdate, saveStatus = 'idle' }: CardInsidePr
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Photo Section */}
           <div className="relative group overflow-hidden aspect-[4/5] bg-[#e5e0d8] border-[8px] border-white shadow-sm">
-            {data.photo ? (
+            {carouselPhotos.length > 0 ? (
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentPhotoIndex}
+                  src={carouselPhotos[currentPhotoIndex].photoUrl}
+                  alt={`Alumni Tambang ${currentPhotoIndex + 1}`}
+                  className="w-full h-full object-cover absolute inset-0"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.8 }}
+                />
+              </AnimatePresence>
+            ) : data.photo ? (
               <img src={data.photo} alt="Alumni Tambang 2005" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-[#8b7e6d] p-6 text-center">
@@ -210,14 +253,26 @@ export function CardInside({ data, onUpdate, saveStatus = 'idle' }: CardInsidePr
               </div>
             )}
             
+            {/* Carousel Indicators */}
+            {carouselPhotos.length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10">
+                {carouselPhotos.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentPhotoIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}
+                  />
+                ))}
+              </div>
+            )}
+            
             {/* Edit Photo Overlay */}
-            <div className={`absolute inset-0 bg-black/40 opacity-0 ${isEditing ? 'opacity-100' : 'group-hover:opacity-100'} transition-opacity flex flex-col items-center justify-center`}>
+            <div className={`absolute inset-0 bg-black/40 opacity-0 ${isEditing ? 'opacity-100' : 'group-hover:opacity-100'} transition-opacity flex flex-col items-center justify-center z-20`}>
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 className="px-4 py-2 bg-[#fdfaf8] text-[#4a3f35] rounded-full font-medium flex items-center gap-2 hover:bg-white transition-colors shadow-lg text-sm mb-2"
               >
-                <Camera size={18} />
-                Ganti Foto
+                <Plus size={18} />
+                Tambah Foto Carousel
               </button>
               {isEditing && (
                  <p className="text-white text-xs bg-black/50 px-2 py-1 rounded">Disarankan: Rasio 4:5 (Portrait)</p>

@@ -26,7 +26,14 @@ export function CardCover({ onOpen, logo }: CardCoverProps) {
 
         <div className="z-10 flex flex-col items-center text-center p-6 bg-white/90 backdrop-blur-sm rounded-full border border-[#e5e0d8] shadow-md relative w-32 h-32 justify-center">
           {logo ? (
-             <img src={logo} alt="Logo" className="w-full h-full object-contain absolute inset-0 p-2" />
+             <motion.img 
+               src={logo} 
+               alt="Logo" 
+               className="w-full h-full object-contain absolute inset-0 p-2" 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ duration: 0.8, ease: "easeOut" }}
+             />
           ) : (
             <>
               <MailOpen className="text-[#2d4f1e] mb-2" size={32} />
