@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Camera, Edit3, Save, Youtube } from 'lucide-react';
+import { Camera, Edit3, Save, Youtube, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import type { CardData } from '../types';
 
 interface CardInsideProps {
   data: CardData;
   onUpdate: (data: CardData) => void;
+  saveStatus?: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 const extractYoutubeId = (url: string) => {
@@ -15,20 +16,69 @@ const extractYoutubeId = (url: string) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
-export function CardInside({ data, onUpdate }: CardInsideProps) {
+// Canvas-based client-side image compression to fit Firestore 1MB limit
+const compressImage = (base64Str: string, maxWidth = 800, maxHeight = 1000, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      // Maintain aspect ratio
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
+export function CardInside({ data, onUpdate, saveStatus = 'idle' }: CardInsideProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [tempMessage, setTempMessage] = useState(data.message);
   const [tempYoutubeUrl, setTempYoutubeUrl] = useState(data.youtubeId ? `https://youtube.com/watch?v=${data.youtubeId}` : '');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsCompressing(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        onUpdate({ ...data, photo: reader.result as string });
+      reader.onloadend = async () => {
+        try {
+          const compressed = await compressImage(reader.result as string, 800, 1000, 0.7);
+          onUpdate({ ...data, photo: compressed });
+        } catch (error) {
+          console.error("Error compressing image:", error);
+          onUpdate({ ...data, photo: reader.result as string });
+        } finally {
+          setIsCompressing(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -37,9 +87,18 @@ export function CardInside({ data, onUpdate }: CardInsideProps) {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsCompressing(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        onUpdate({ ...data, logo: reader.result as string });
+      reader.onloadend = async () => {
+        try {
+          const compressed = await compressImage(reader.result as string, 400, 400, 0.8);
+          onUpdate({ ...data, logo: compressed });
+        } catch (error) {
+          console.error("Error compressing logo:", error);
+          onUpdate({ ...data, logo: reader.result as string });
+        } finally {
+          setIsCompressing(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -61,6 +120,34 @@ export function CardInside({ data, onUpdate }: CardInsideProps) {
       transition={{ duration: 1, type: "spring", bounce: 0.4 }}
       className="w-full max-w-3xl mx-auto bg-white/80 backdrop-blur-md rounded-none shadow-2xl border-[12px] border-white relative"
     >
+      {/* Cloud Sync Status Indicator */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 text-xs font-medium">
+        {isCompressing && (
+          <span className="flex items-center gap-1 text-[#8b5e3c] bg-[#fdfaf8] px-2.5 py-1 border border-[#e5e0d8] rounded-full animate-pulse shadow-sm">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Mengompres gambar...
+          </span>
+        )}
+        {!isCompressing && saveStatus === 'saving' && (
+          <span className="flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-1 border border-amber-200 rounded-full animate-pulse shadow-sm">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Menyimpan ke Cloud...
+          </span>
+        )}
+        {!isCompressing && saveStatus === 'saved' && (
+          <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 border border-emerald-200 rounded-full shadow-sm">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+            Tersimpan di Cloud
+          </span>
+        )}
+        {!isCompressing && saveStatus === 'error' && (
+          <span className="flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-1 border border-red-200 rounded-full shadow-sm">
+            <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+            Gagal Menyimpan (Coba lagi)
+          </span>
+        )}
+      </div>
+
       <div className="p-8 md:p-12">
         <div className="text-center mb-10 border-b border-[#e5e0d8] pb-6 relative group">
           {/* Logo Section */}

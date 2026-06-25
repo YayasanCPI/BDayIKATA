@@ -17,6 +17,8 @@ export default function App() {
     message: "Selamat memperingati hari jadi yang ke-26, IKATA UPN 'Veteran' Yogyakarta!\n\nSemoga ikatan persaudaraan alumni tambang semakin solid, terus berkontribusi untuk almamater dan kemajuan pertambangan nusantara. Tambang!!",
   });
 
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
   useEffect(() => {
     // Listen for changes from Firestore
     const unsubscribe = onSnapshot(cardDocRef, (doc) => {
@@ -31,11 +33,15 @@ export default function App() {
   const handleUpdateCard = async (newData: CardData) => {
     // Optimistic update
     setCardData(newData);
+    setSaveStatus('saving');
     // Save to Firestore
     try {
       await setDoc(cardDocRef, newData);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error('Error saving to Firestore:', error);
+      setSaveStatus('error');
     }
   };
 
@@ -84,7 +90,7 @@ export default function App() {
           <CardCover onOpen={handleOpen} logo={cardData.logo} />
         ) : (
           <div className="w-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <CardInside data={cardData} onUpdate={handleUpdateCard} />
+            <CardInside data={cardData} onUpdate={handleUpdateCard} saveStatus={saveStatus} />
             <Guestbook />
           </div>
         )}
