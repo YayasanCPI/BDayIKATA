@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: './', // Konfigurasi agar aset dimuat dengan path relatif di GitHub Pages
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
