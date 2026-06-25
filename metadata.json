@@ -1,0 +1,8 @@
+{
+  "name": "IKATA 26th Anniversary Card",
+  "description": "Digital interactive birthday greeting card for the 26th anniversary of IKATA UPN Jogja from Alumni Tambang 2005.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
